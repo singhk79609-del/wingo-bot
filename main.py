@@ -1,4 +1,4 @@
-hereimport os
+import os
 import random
 import threading
 import hashlib
@@ -10,6 +10,12 @@ from flask import Flask
 
 TOKEN = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(TOKEN)
+
+# Purana webhook aur pending updates clear karne ke liye taaki conflict na ho
+try:
+    bot.remove_webhook(drop_pending_updates=True)
+except Exception as e:
+    print("Webhook clear error:", e)
 
 # Flask Web Server Render ko active rakhne ke liye
 app = Flask(__name__)
@@ -28,9 +34,15 @@ ist = pytz.timezone('Asia/Kolkata')
 def get_current_period():
     now = datetime.now(ist)
     date_str = now.strftime("%Y%m%d")
-    total_minutes = now.hour * 60 + now.minute + 1
-    # Standard Period Format: YYYYMMDD100XXXX
-    period_no = f"{date_str}100{total_minutes:04d}"
+    
+    # Din ke total minutes calculate karna
+    total_minutes = now.hour * 60 + now.minute
+    
+    # Real Wingo game ke sequence ke sath match karne ke liye offset (-329)
+    game_serial = total_minutes - 329
+    
+    # Sahi Standard Period Format: YYYYMMDD + 1000 + 4-digit serial
+    period_no = f"{date_str}1000{game_serial:04d}"
     return period_no
 
 def get_deterministic_prediction(period_str):
@@ -71,7 +83,7 @@ def handle_prediction(message):
         f"🔹 **PERIOD NUMBER:** `{period}`\n"
         f"🔹 **PREDICTED RESULT:** {size}\n"
         f"🔹 **PATTERN STATUS:** Active Trend Follower\n\n"
-        f"💰 **PLAY WITH 8 LEVEL FUND**\n"
+        f"💰 **PLAY WITH 7 LEVEL FUND**\n"
         f"⚠️ **PLAY AT YOUR OWN RISK**"
     )
     bot.send_message(message.chat.id, text, parse_mode="Markdown", reply_markup=main_keyboard())
@@ -96,4 +108,4 @@ def handle_channel(message):
 
 if __name__ == '__main__':
     threading.Thread(target=run_flask).start()
-    bot.infinity_polling()
+    bot.infinity_polling(skip_pending=True)
