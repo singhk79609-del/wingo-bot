@@ -28,9 +28,8 @@ ist = pytz.timezone('Asia/Kolkata')
 def get_current_period():
     now = datetime.now(ist)
     date_str = now.strftime("%Y%m%d")
-    # Din ka kitna-va minute hai (1 se 1440 tak)
     total_minutes = now.hour * 60 + now.minute + 1
-    # Standard Period Format: YYYYMMDD100XXXX (e.g. 202609011000985)
+    # Standard Period Format: YYYYMMDD100XXXX
     period_no = f"{date_str}100{total_minutes:04d}"
     return period_no
 
@@ -50,11 +49,10 @@ def get_deterministic_prediction(period_str):
 def main_keyboard():
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btn1 = types.KeyboardButton("🎯 Get Prediction")
-    btn2 = types.KeyboardButton("⏰ Current Period")
-    btn3 = types.KeyboardButton("📝 Registration Process")
-    btn4 = types.KeyboardButton("❓ Help / Info")
-    markup.add(btn1, btn2)
-    markup.add(btn3, btn4)
+    btn2 = types.KeyboardButton("📝 Registration Process")
+    btn3 = types.KeyboardButton("📢 Official Channel")
+    markup.add(btn1)
+    markup.add(btn2, btn3)
     return markup
 
 @bot.message_handler(commands=['start'])
@@ -78,11 +76,6 @@ def handle_prediction(message):
     )
     bot.send_message(message.chat.id, text, parse_mode="Markdown", reply_markup=main_keyboard())
 
-@bot.message_handler(func=lambda message: message.text == "⏰ Current Period")
-def handle_period(message):
-    period = get_current_period()
-    bot.send_message(message.chat.id, f"⏰ **Current Wingo Period Number:**\n`{period}`", parse_mode="Markdown", reply_markup=main_keyboard())
-
 @bot.message_handler(func=lambda message: message.text == "📝 Registration Process")
 def handle_register(message):
     reg_text = (
@@ -92,14 +85,14 @@ def handle_register(message):
     )
     bot.send_message(message.chat.id, reg_text, parse_mode="Markdown", reply_markup=main_keyboard())
 
-@bot.message_handler(func=lambda message: message.text == "❓ Help / Info")
-def handle_help(message):
-    help_text = (
+@bot.message_handler(func=lambda message: message.text == "📢 Official Channel")
+def handle_channel(message):
+    channel_text = (
         "📢 **Join Our Official Telegram Channel**\n\n"
         "Latest updates aur daily signals ke liye channel join karein:\n"
         "🔗 **CHANNEL LINK:** https://t.me/rajagamesnumbersurshot"
     )
-    bot.send_message(message.chat.id, help_text, parse_mode="Markdown", reply_markup=main_keyboard())
+    bot.send_message(message.chat.id, channel_text, parse_mode="Markdown", reply_markup=main_keyboard())
 
 if __name__ == '__main__':
     threading.Thread(target=run_flask).start()
