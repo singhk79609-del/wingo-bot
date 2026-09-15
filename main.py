@@ -119,7 +119,7 @@ all_users.update(load_users())
 # ==========================================================
 
 try:
-    bot.remove_webhook(drop_pending_updates=True)
+    bot.remove_webhook()
 except Exception as e:
     print("Webhook clear error:", e)
 
