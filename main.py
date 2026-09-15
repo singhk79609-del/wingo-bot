@@ -348,14 +348,10 @@ def handle_prediction(message):
     )
 
     text = (
-        f"📊 **WINGO 1 MIN SMART PREDICTION** 📊\n\n"
-        f"🔹 **PERIOD NUMBER:** `{period}`\n"
-        f"🔹 **PREDICTED RESULT:** {size}\n"
-        f"🔹 **PATTERN STATUS:** Active Trend Follower\n\n"
-        f"💰 **PLAY WITH 7 LEVEL FUND**\n"
-        f"⚠️ **PLAY AT YOUR OWN RISK**"
+    f"PERIOD NO :-   {period}\n\n"
+    f"BET ON :-   {size.replace(' 📈', '').replace(' 📉', '')}\n\n"
+    f"BASED ON ACTIVE TREND FLOW"
     )
-
     bot.send_message(
         message.chat.id,
         text,
@@ -376,12 +372,12 @@ def handle_register(message):
     save_user(message.chat.id)
 
     reg_text = (
-        "📝 **Registration Process**\n\n"
-        "Apna account successfully create karne ke liye "
-        "niche diye gaye link par click karein:\n"
-        "🔗 **REGISTER LINK:** "
-        "https://www.82winoo.com/#/register?"
-        "invitationCode=782544845183"
+    "📝 **Registration Process**\n\n"
+    "Apna account successfully create karne ke liye "
+    "niche diye gaye link par click karein:\n"
+    "🔗 **REGISTER LINK:** "
+    "https://www.veergame77.com/#/register?"
+    "invitationCode=69576127029"
     )
 
     bot.send_message(
