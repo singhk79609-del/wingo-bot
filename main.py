@@ -376,8 +376,7 @@ def handle_register(message):
     "Apna account successfully create karne ke liye "
     "niche diye gaye link par click karein:\n"
     "🔗 **REGISTER LINK:** "
-    "https://www.veergame77.com/#/register?"
-    "invitationCode=69576127029"
+    "https://www.82winoo.com/#/register?invitationCode=782544845183"
     )
 
     bot.send_message(
