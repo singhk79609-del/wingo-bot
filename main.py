@@ -69,38 +69,38 @@ def send_welcome(message):
     save_user(message.chat.id)
     bot.send_message(
         message.chat.id,
-        "🤖 **MAAN WIN PREDICTION BOT CONNECTED**\nClick 'Get Prediction' to generate and post signals.",
+        "🤖 <b>MAAN WIN PREDICTION BOT CONNECTED</b>\nClick 'Get Prediction' to generate and post signals.",
         reply_markup=get_main_keyboard(),
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
 
 @bot.message_handler(func=lambda message: message.text == "📢 Official Channel")
 def official_channel_handler(message):
     save_user(message.chat.id)
     msg = (
-        "📢 **Join Our Official Telegram Channel**\n\n"
+        "📢 <b>Join Our Official Telegram Channel</b>\n\n"
         "Latest updates aur daily signals ke liye channel join karein:\n"
         f"🔗 CHANNEL LINK: {OFFICIAL_CHANNEL_URL}"
     )
-    bot.send_message(message.chat.id, msg, parse_mode="Markdown")
+    bot.send_message(message.chat.id, msg, parse_mode="HTML")
 
 @bot.message_handler(func=lambda message: message.text == "🔗 Register Link")
 def register_link_handler(message):
     save_user(message.chat.id)
     msg = (
-        "📝 **Registration Process**\n\n"
+        "📝 <b>Registration Process</b>\n\n"
         "Apna account successfully create karne ke liye niche diye gaye link par click karein:\n"
         f"🔗 REGISTER LINK: {REGISTER_LINK_URL}"
     )
-    bot.send_message(message.chat.id, msg, parse_mode="Markdown")
+    bot.send_message(message.chat.id, msg, parse_mode="HTML")
 
-# --- MANUAL "GET PREDICTION" BUTTON HANDLER (CHANNEL POST) ---
+# --- MANUAL "GET PREDICTION" BUTTON HANDLER ---
 @bot.message_handler(func=lambda message: message.text == "Get Prediction")
 def handle_get_prediction(message):
     save_user(message.chat.id)
     global total_wins, current_streak
     
-    # UTC time-based period calculation matching exact game format
+    # Exact UTC time-based period calculation
     now_utc = datetime.datetime.utcnow()
     date_str = now_utc.strftime("%Y%m%d")
     total_minutes = (now_utc.hour * 60) + now_utc.minute + 1
@@ -109,7 +109,7 @@ def handle_get_prediction(message):
     next_period_num = f"{date_str}10001{seq_str}"
     short_next_period = next_period_num[-4:]
     
-    trends = ["GREEN", "RED", "VIOLET"]
+    trends = ["GREEN", "RED"]
     sizes = ["BIG", "SMALL"]
     
     trend = random.choice(trends)
@@ -122,16 +122,16 @@ def handle_get_prediction(message):
     
     prediction_text = (
         f"═══════════════════════════\n"
-        f"     🎯 POWERED BY MAAN WIN\n"
+        f"     🎯 <b>POWERED BY MAAN WIN</b>\n"
         f"═══════════════════════════\n"
-        f"           🎰 𝗪𝗜𝗡𝗚𝗢 𝟭 𝗠𝗜𝗡𝗨𝗧𝗘🎰\n\n"
-        f"🗿 𝗣𝗘𝗥𝗜𝗢𝗗: {short_next_period}\n"
-        f"🎲 𝗣𝗥𝗘𝗗𝗜𝗖𝗧𝗜𝗢𝗡: {trend} ({size_trend})\n"
-        f"🎯 𝗡𝗨𝗠𝗕𝗘𝗥: {pred_number_str}\n\n"
-        f"⚠  𝟳 𝗟𝗘𝗩𝗘𝗟 𝗠𝗘𝗡𝗧𝗘𝗡 𝗔𝗟𝗟 𝗧𝗜𝗠𝗘  ⚠️ \n\n"
-        f"🔗 **REGISTER LINK:** {REGISTER_LINK_URL}\n\n"
+        f"           🎰 <b>𝗪𝗜𝗡𝗚𝗢 𝟭 𝗠𝗜𝗡𝗨𝗧𝗘</b>🎰\n\n"
+        f"🗿 <b>𝗣𝗘𝗥𝗜𝗢𝗗:</b> {short_next_period}\n"
+        f"🎲 <b>𝗣𝗥𝗘𝗗𝗜𝗖𝗧𝗜𝗢𝗡:</b> {trend} ({size_trend})\n"
+        f"🎯 <b>𝗡𝗨𝗠𝗕𝗘𝗥:</b> {pred_number_str}\n\n"
+        f"⚠️  <b>𝟳 𝗟𝗘𝗩𝗘𝗟 𝗠𝗘𝗡𝗧𝗘𝗡 𝗔𝗟𝗟 𝗧𝗜𝗠𝗘</b>  ⚠️\n\n"
+        f"🔗 <b>REGISTER LINK:</b> {REGISTER_LINK_URL}\n\n"
         f"═══════════════════════════\n"
-        f" ☠️ 𝗣𝗢𝗪𝗘𝗥 𝗢𝗙 : @maanwin123_bot\n"
+        f" ☠️ <b>𝗣𝗢𝗪𝗘𝗥 𝗢𝗙 :</b> @maanwin123_bot\n"
         f"═══════════════════════════"
     )
     
@@ -142,12 +142,12 @@ def handle_get_prediction(message):
     
     try:
         with open(img_path, 'rb') as photo:
-            bot.send_photo(TARGET_CHANNEL, photo, caption=prediction_text, reply_markup=markup, parse_mode="Markdown")
+            bot.send_photo(TARGET_CHANNEL, photo, caption=prediction_text, reply_markup=markup, parse_mode="HTML")
         bot.reply_to(message, "✅ Prediction successfully sent to channel!")
     except Exception as err:
         bot.reply_to(message, f"❌ Send Error: {err}")
 
-# --- DIRECT ADMIN BROADCAST TO BOT USERS ONLY (NOT CHANNEL) ---
+# --- DIRECT ADMIN BROADCAST TO BOT USERS ONLY ---
 @bot.message_handler(func=lambda message: message.from_user.id == ADMIN_USER_ID and message.text not in ["Get Prediction", "📢 Official Channel", "🔗 Register Link"])
 def direct_admin_broadcast(message):
     users = load_users()
@@ -160,13 +160,13 @@ def direct_admin_broadcast(message):
 
     for u_id in users:
         try:
-            bot.send_message(u_id, message.text, parse_mode="Markdown")
+            bot.send_message(u_id, message.text)
             success_count += 1
-            time.sleep(0.05) # Telegram rate-limit control
+            time.sleep(0.05)
         except Exception:
             fail_count += 1
 
-    bot.reply_to(message, f"📢 **Broadcast Finished!**\n✅ Sent to: {success_count} users\n❌ Failed: {fail_count} users")
+    bot.reply_to(message, f"📢 <b>Broadcast Finished!</b>\n✅ Sent to: {success_count} users\n❌ Failed: {fail_count} users", parse_mode="HTML")
 
 @bot.message_handler(content_types=['photo'], func=lambda message: message.from_user.id == ADMIN_USER_ID)
 def direct_admin_photo_broadcast(message):
@@ -183,13 +183,13 @@ def direct_admin_photo_broadcast(message):
 
     for u_id in users:
         try:
-            bot.send_photo(u_id, photo_id, caption=caption, parse_mode="Markdown")
+            bot.send_photo(u_id, photo_id, caption=caption)
             success_count += 1
             time.sleep(0.05)
         except Exception:
             fail_count += 1
 
-    bot.reply_to(message, f"📢 **Photo Broadcast Finished!**\n✅ Sent to: {success_count} users\n❌ Failed: {fail_count} users")
+    bot.reply_to(message, f"📢 <b>Photo Broadcast Finished!</b>\n✅ Sent to: {success_count} users\n❌ Failed: {fail_count} users", parse_mode="HTML")
 
 def generate_prediction_image(period, trend, number_str, wins, streak):
     img_width, img_height = 800, 900
