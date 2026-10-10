@@ -7,7 +7,6 @@ import pytz
 import telebot
 from telebot import types
 from flask import Flask
-import urllib.parse
 
 TOKEN = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(TOKEN)
@@ -24,7 +23,7 @@ try:
 except Exception as e:
     print("Webhook clear error:", e)
 
-# Flask Web Server
+# Flask Web Server Render ko active rakhne ke liye
 app = Flask(__name__)
 
 @app.route('/')
@@ -64,26 +63,6 @@ def get_deterministic_prediction(period_str):
     number_display = f"{primary_num} / {secondary_num}"
     return period_str, size, number_display
 
-def get_prediction_image_url(period, size, number_str):
-    bg_color = "00ff7f" if size == "BIG" else "ff4500"
-    chart_config = {
-        "type": "radialGauge",
-        "data": {
-            "datasets": [{"data": [100], "backgroundColor": f"#{bg_color}"}]
-        },
-        "options": {
-            "title": {
-                "display": True,
-                "text": f"PERIOD: {period} | RESULT: {size} | NUM: {number_str}",
-                "fontColor": "#ffffff",
-                "fontSize": 18
-            }
-        }
-    }
-    encoded_config = urllib.parse.quote(str(chart_config).replace("'", '"'))
-    image_url = f"https://quickchart.io/chart?c={encoded_config}&w=600&h=300&bkg=151525"
-    return image_url
-
 def main_keyboard():
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btn1 = types.KeyboardButton("🎯 Get Prediction")
@@ -98,7 +77,7 @@ def send_welcome(message):
     all_users.add(message.chat.id)
     bot.reply_to(
         message, 
-        "Welcome to Wingo 1-Min Prediction Bot! 🎰\nNiche दिए गए buttons ka use karein:", 
+        "Welcome to Wingo 1-Min Prediction Bot! 🎰\nNiche diye gaye buttons ka use karein:", 
         reply_markup=main_keyboard()
     )
 
@@ -145,24 +124,14 @@ def handle_prediction(message):
         "═══════════════════════════"
     )
     
-    try:
-        img_url = get_prediction_image_url(short_period, size, number_display)
-        bot.send_photo(
-            message.chat.id, 
-            photo=img_url, 
-            caption=formatted_text, 
-            reply_markup=main_keyboard()
-        )
-    except Exception as e:
-        print("Image send error:", e)
-        bot.send_message(message.chat.id, formatted_text, reply_markup=main_keyboard())
+    bot.send_message(message.chat.id, formatted_text, reply_markup=main_keyboard())
 
 @bot.message_handler(func=lambda message: "Registration Process" in message.text if message.text else False)
 def handle_register(message):
     all_users.add(message.chat.id)
     reg_text = (
         "📝 **Registration Process**\n\n"
-        "Apna account successfully create karne ke liye niche दिए गए link par click karein:\n"
+        "Apna account successfully create karne ke liye niche diye gaye link par click karein:\n"
         "🔗 **REGISTER LINK:** https://maanwin24.com/register?inviteCode=AEATD8N&from=web"
     )
     bot.send_message(message.chat.id, reg_text, parse_mode="Markdown", reply_markup=main_keyboard())
@@ -177,7 +146,6 @@ def handle_channel(message):
     )
     bot.send_message(message.chat.id, channel_text, parse_mode="Markdown", reply_markup=main_keyboard())
 
-# Sabse aakhri mein general message tracker (is se handlers block nahi honge)
 @bot.message_handler(func=lambda message: True)
 def track_all_users(message):
     all_users.add(message.chat.id)
