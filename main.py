@@ -7,8 +7,8 @@ import pytz
 import telebot
 from telebot import types
 from flask import Flask
-from io import BytesIO
-from PIL import Image, ImageDraw, ImageFont
+import requests
+import urllib.parse
 
 TOKEN = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(TOKEN)
@@ -65,30 +65,29 @@ def get_deterministic_prediction(period_str):
     number_display = f"{primary_num} / {secondary_num}"
     return period_str, size, number_display
 
-def create_prediction_image(period, size, number_str):
-    # Create prediction banner image on the fly
-    img = Image.new('RGB', (800, 400), color=(15, 15, 25))
-    draw = ImageDraw.Draw(img)
+def get_prediction_image_url(period, size, number_str):
+    # QuickChart API se lightweight banner generate karna (bina Pillow library ke)
+    bg_color = "00ff7f" if size == "BIG" else "ff4500"
+    title_text = f"maan.win 1 MIN - {size}"
     
-    # Outer Border
-    draw.rectangle([(10, 10), (790, 390)], outline=(255, 215, 0), width=4)
-    
-    # Text Content
-    draw.text((220, 30), "maan.win 1 Min Bot", fill=(255, 215, 0))
-    draw.text((50, 100), f"PERIOD : {period}", fill=(255, 255, 255))
-    
-    # Big / Small Color
-    color = (0, 255, 127) if size == "BIG" else (255, 69, 0)
-    draw.text((50, 170), f"PREDICTION : {size}", fill=color)
-    draw.text((50, 240), f"NUMBERS : {number_str}", fill=(255, 255, 255))
-    draw.text((180, 330), "⚠️ MAINTAIN 7 LEVEL FUNDS ⚠️", fill=(255, 215, 0))
-    
-    # Save image to memory buffer
-    bio = BytesIO()
-    bio.name = 'prediction.png'
-    img.save(bio, 'PNG')
-    bio.seek(0)
-    return bio
+    # Dynamically generated image card
+    chart_config = {
+        "type": "radialGauge",
+        "data": {
+            "datasets": [{"data": [100], "backgroundColor": f"#{bg_color}"}]
+        },
+        "options": {
+            "title": {
+                "display": True,
+                "text": f"PERIOD: {period} | RESULT: {size} | NUM: {number_str}",
+                "fontColor": "#ffffff",
+                "fontSize": 18
+            }
+        }
+    }
+    encoded_config = urllib.parse.quote(str(chart_config).replace("'", '"'))
+    image_url = f"https://quickchart.io/chart?c={encoded_config}&w=600&h=300&bkg=151525"
+    return image_url
 
 def main_keyboard():
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
@@ -139,7 +138,6 @@ def handle_prediction(message):
     all_users.add(message.chat.id)
     period, size, number_display = get_deterministic_prediction(get_current_period())
     
-    # Short period ID extraction (e.g., last 4 digits)
     short_period = period[-4:] if len(period) >= 4 else period
 
     formatted_text = (
@@ -157,17 +155,15 @@ def handle_prediction(message):
     )
     
     try:
-        # Generate & Send Photo with Caption
-        img_buffer = create_prediction_image(short_period, size, number_display)
+        img_url = get_prediction_image_url(short_period, size, number_display)
         bot.send_photo(
             message.chat.id, 
-            photo=img_buffer, 
+            photo=img_url, 
             caption=formatted_text, 
             reply_markup=main_keyboard()
         )
     except Exception as e:
         print("Image send error:", e)
-        # Fallback to Text if image generation fails
         bot.send_message(message.chat.id, formatted_text, reply_markup=main_keyboard())
 
 @bot.message_handler(func=lambda message: message.text == "📝 Registration Process")
@@ -175,7 +171,7 @@ def handle_register(message):
     all_users.add(message.chat.id)
     reg_text = (
         "📝 **Registration Process**\n\n"
-        "Apna account successfully create karne ke liye niche diye gaye link par click karein:\n"
+        "Apna account successfully create karne ke liye niche दिए गए link par click karein:\n"
         "🔗 **REGISTER LINK:** https://maanwin24.com/register?inviteCode=AEATD8N&from=web"
     )
     bot.send_message(message.chat.id, reg_text, parse_mode="Markdown", reply_markup=main_keyboard())
