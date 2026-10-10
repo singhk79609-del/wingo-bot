@@ -1,7 +1,9 @@
 import time
 import threading
 import os
-import requests
+import random
+import datetime
+import json
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from PIL import Image, ImageDraw, ImageFont
@@ -30,11 +32,29 @@ TARGET_CHANNEL = "@fakegoogle12345"
 
 # Aapki Permanent Admin ID
 ADMIN_USER_ID = 7095994825
+USERS_FILE = "users.json"
 
 bot = telebot.TeleBot(TOKEN)
 
 total_wins = 1421
 current_streak = 2
+
+# --- USER STORAGE FUNCTIONS ---
+def load_users():
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, "r") as f:
+                return set(json.load(f))
+        except Exception:
+            return set()
+    return set()
+
+def save_user(user_id):
+    users = load_users()
+    if user_id not in users:
+        users.add(user_id)
+        with open(USERS_FILE, "w") as f:
+            json.dump(list(users), f)
 
 def get_main_keyboard():
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
@@ -46,6 +66,7 @@ def get_main_keyboard():
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
+    save_user(message.chat.id)
     bot.send_message(
         message.chat.id,
         "🤖 **MAAN WIN PREDICTION BOT CONNECTED**\nClick 'Get Prediction' to generate and post signals.",
@@ -55,6 +76,7 @@ def send_welcome(message):
 
 @bot.message_handler(func=lambda message: message.text == "📢 Official Channel")
 def official_channel_handler(message):
+    save_user(message.chat.id)
     msg = (
         "📢 **Join Our Official Telegram Channel**\n\n"
         "Latest updates aur daily signals ke liye channel join karein:\n"
@@ -64,6 +86,7 @@ def official_channel_handler(message):
 
 @bot.message_handler(func=lambda message: message.text == "🔗 Register Link")
 def register_link_handler(message):
+    save_user(message.chat.id)
     msg = (
         "📝 **Registration Process**\n\n"
         "Apna account successfully create karne ke liye niche diye gaye link par click karein:\n"
@@ -71,26 +94,31 @@ def register_link_handler(message):
     )
     bot.send_message(message.chat.id, msg, parse_mode="Markdown")
 
-# --- MANUAL "GET PREDICTION" BUTTON HANDLER ---
+# --- MANUAL "GET PREDICTION" BUTTON HANDLER (CHANNEL POST) ---
 @bot.message_handler(func=lambda message: message.text == "Get Prediction")
 def handle_get_prediction(message):
+    save_user(message.chat.id)
     global total_wins, current_streak
     
-    history = fetch_wingo_data()
-    if not history:
-        bot.send_message(message.chat.id, "❌ API se data fetch karne mein error aayi. Dobara try karein.")
-        return
-        
-    latest_draw = history[0]
-    current_period = str(latest_draw['issueNumber'])
-    next_period_num = str(int(current_period) + 1)
+    # UTC time-based period calculation matching exact game format
+    now_utc = datetime.datetime.utcnow()
+    date_str = now_utc.strftime("%Y%m%d")
+    total_minutes = (now_utc.hour * 60) + now_utc.minute + 1
+    seq_str = f"{total_minutes:04d}"
+    
+    next_period_num = f"{date_str}10001{seq_str}"
     short_next_period = next_period_num[-4:]
     
-    nums = [int(x['number']) for x in history[:10]]
-    big_count = sum(1 for n in nums if n >= 5)
-    trend = "GREEN" if big_count >= 5 else "RED"
-    size_trend = "SMALL" if big_count >= 5 else "BIG"
-    pred_number_str = "4 / 0" if size_trend == "SMALL" else "6 / 7"
+    trends = ["GREEN", "RED", "VIOLET"]
+    sizes = ["BIG", "SMALL"]
+    
+    trend = random.choice(trends)
+    size_trend = random.choice(sizes)
+    
+    if size_trend == "SMALL":
+        pred_number_str = random.choice(["1 / 3", "0 / 2", "4 / 1"])
+    else:
+        pred_number_str = random.choice(["6 / 8", "5 / 7", "9 / 6"])
     
     prediction_text = (
         f"═══════════════════════════\n"
@@ -119,25 +147,49 @@ def handle_get_prediction(message):
     except Exception as err:
         bot.reply_to(message, f"❌ Send Error: {err}")
 
-# --- DIRECT ADMIN BROADCAST (Without /broadcast command for Admin) ---
+# --- DIRECT ADMIN BROADCAST TO BOT USERS ONLY (NOT CHANNEL) ---
 @bot.message_handler(func=lambda message: message.from_user.id == ADMIN_USER_ID and message.text not in ["Get Prediction", "📢 Official Channel", "🔗 Register Link"])
 def direct_admin_broadcast(message):
-    try:
-        if message.text:
-            bot.send_message(TARGET_CHANNEL, message.text, parse_mode="Markdown")
-            bot.reply_to(message, "✅ Sent to channel!")
-    except Exception as e:
-        bot.reply_to(message, f"❌ Error: {e}")
+    users = load_users()
+    if not users:
+        bot.reply_to(message, "⚠️ Abhi tak koi user bot me add nahi hua hai!")
+        return
+
+    success_count = 0
+    fail_count = 0
+
+    for u_id in users:
+        try:
+            bot.send_message(u_id, message.text, parse_mode="Markdown")
+            success_count += 1
+            time.sleep(0.05) # Telegram rate-limit control
+        except Exception:
+            fail_count += 1
+
+    bot.reply_to(message, f"📢 **Broadcast Finished!**\n✅ Sent to: {success_count} users\n❌ Failed: {fail_count} users")
 
 @bot.message_handler(content_types=['photo'], func=lambda message: message.from_user.id == ADMIN_USER_ID)
 def direct_admin_photo_broadcast(message):
-    try:
-        photo_id = message.photo[-1].file_id
-        caption = message.caption if message.caption else ""
-        bot.send_photo(TARGET_CHANNEL, photo_id, caption=caption, parse_mode="Markdown")
-        bot.reply_to(message, "✅ Photo sent to channel!")
-    except Exception as e:
-        bot.reply_to(message, f"❌ Error: {e}")
+    users = load_users()
+    if not users:
+        bot.reply_to(message, "⚠️ Abhi tak koi user bot me add nahi hua hai!")
+        return
+
+    photo_id = message.photo[-1].file_id
+    caption = message.caption if message.caption else ""
+
+    success_count = 0
+    fail_count = 0
+
+    for u_id in users:
+        try:
+            bot.send_photo(u_id, photo_id, caption=caption, parse_mode="Markdown")
+            success_count += 1
+            time.sleep(0.05)
+        except Exception:
+            fail_count += 1
+
+    bot.reply_to(message, f"📢 **Photo Broadcast Finished!**\n✅ Sent to: {success_count} users\n❌ Failed: {fail_count} users")
 
 def generate_prediction_image(period, trend, number_str, wins, streak):
     img_width, img_height = 800, 900
@@ -168,24 +220,6 @@ def generate_prediction_image(period, trend, number_str, wins, streak):
     file_path = "dynamic_prediction.png"
     image.save(file_path)
     return file_path
-
-def fetch_wingo_data():
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Referer": "https://draw.ar-lottery01.com/"
-    }
-    try:
-        url = f"https://draw.ar-lottery01.com/WinGo/WinGo_1M/GetHistoryIssuePage.json?t={int(time.time()*1000)}"
-        res = requests.get(url, headers=headers, timeout=15)
-        print(f"API Status Code: {res.status_code}")
-        if res.status_code == 200:
-            data = res.json()
-            if 'data' in data and 'list' in data['data']:
-                return data['data']['list']
-    except Exception as e:
-        print(f"API Error Details: {e}")
-    return None
 
 if __name__ == "__main__":
     bot.infinity_polling()
