@@ -37,41 +37,25 @@ JACKPOT_STICKER_ID = "CAACAgUAAxkBAAESBU5qyjYSFQVYUL7i519ZKT8K0ki_jQACbhcAAh2MgF
 
 bot = telebot.TeleBot(TOKEN)
 
-is_running = False
-last_checked_issue = None
-active_prediction = None
-total_wins = 1198
-current_streak = 1
+total_wins = 1421
+current_streak = 2
 
 def get_main_keyboard():
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    btn1 = KeyboardButton("▶ Start Prediction")
-    btn2 = KeyboardButton("⏹ Stop Prediction")
+    btn1 = KeyboardButton("Get Prediction")
     btn3 = KeyboardButton("📢 Official Channel")
     btn4 = KeyboardButton("🔗 Register Link")
-    keyboard.add(btn1, btn2, btn3, btn4)
+    keyboard.add(btn1, btn3, btn4)
     return keyboard
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     bot.send_message(
         message.chat.id,
-        "🤖 **MAAN WIN PREDICTION BOT CONNECTED**\nUse the buttons below to control predictions and access official links.",
+        "🤖 **MAAN WIN PREDICTION BOT CONNECTED**\nClick 'Get Prediction' to generate and post signals.",
         reply_markup=get_main_keyboard(),
         parse_mode="Markdown"
     )
-
-@bot.message_handler(func=lambda message: message.text == "▶ Start Prediction")
-def start_prediction_command(message):
-    global is_running
-    is_running = True
-    bot.send_message(message.chat.id, "✅ **Prediction Started Successfully!**", reply_markup=get_main_keyboard(), parse_mode="Markdown")
-
-@bot.message_handler(func=lambda message: message.text == "⏹ Stop Prediction")
-def stop_prediction_command(message):
-    global is_running
-    is_running = False
-    bot.send_message(message.chat.id, "🛑 **Stopped Predictions.**", reply_markup=get_main_keyboard(), parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: message.text == "📢 Official Channel")
 def official_channel_handler(message):
@@ -91,8 +75,56 @@ def register_link_handler(message):
     )
     bot.send_message(message.chat.id, msg, parse_mode="Markdown")
 
+# --- MANUAL "GET PREDICTION" BUTTON HANDLER ---
+@bot.message_handler(func=lambda message: message.text == "Get Prediction")
+def handle_get_prediction(message):
+    global total_wins, current_streak
+    
+    history = fetch_wingo_data()
+    if not history:
+        bot.send_message(message.chat.id, "❌ API se data fetch karne mein error aayi. Dobara try karein.")
+        return
+        
+    latest_draw = history[0]
+    current_period = str(latest_draw['issueNumber'])
+    next_period_num = str(int(current_period) + 1)
+    short_next_period = next_period_num[-4:]
+    
+    nums = [int(x['number']) for x in history[:10]]
+    big_count = sum(1 for n in nums if n >= 5)
+    trend = "GREEN" if big_count >= 5 else "RED"
+    size_trend = "SMALL" if big_count >= 5 else "BIG"
+    pred_number_str = "4 / 0" if size_trend == "SMALL" else "6 / 7"
+    
+    prediction_text = (
+        f"═══════════════════════════\n"
+        f"     🎯 POWERED BY MAAN WIN\n"
+        f"═══════════════════════════\n"
+        f"           🎰 𝗪𝗜𝗡𝗚𝗢 𝟭 𝗠𝗜𝗡𝗨𝗧𝗘🎰\n\n"
+        f"🗿 𝗣𝗘𝗥𝗜𝗢𝗗: {short_next_period}\n"
+        f"🎲 𝗣𝗥𝗘𝗗𝗜𝗖𝗧𝗜𝗢𝗡: {trend} ({size_trend})\n"
+        f"🎯 𝗡𝗨𝗠𝗕𝗘𝗥: {pred_number_str}\n\n"
+        f"⚠  𝟳 𝗟𝗘𝗩𝗘𝗟 𝗠𝗘𝗡𝗧𝗘𝗡 𝗔𝗟𝗟 𝗧𝗜𝗠𝗘  ⚠️ \n\n"
+        f"🔗 **REGISTER LINK:** {REGISTER_LINK_URL}\n\n"
+        f"═══════════════════════════\n"
+        f" ☠️ 𝗣𝗢𝗪𝗘𝗥 𝗢𝗙 : @maanwin123_bot\n"
+        f"═══════════════════════════"
+    )
+    
+    img_path = generate_prediction_image(short_next_period, size_trend, pred_number_str, total_wins, current_streak)
+    
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("🔗 REGISTER HERE", url=REGISTER_LINK_URL))
+    
+    try:
+        with open(img_path, 'rb') as photo:
+            bot.send_photo(TARGET_CHANNEL, photo, caption=prediction_text, reply_markup=markup, parse_mode="Markdown")
+        bot.reply_to(message, "✅ Prediction successfully sent to channel!")
+    except Exception as err:
+        bot.reply_to(message, f"❌ Send Error: {err}")
+
 # --- DIRECT ADMIN BROADCAST (Without /broadcast command for Admin) ---
-@bot.message_handler(func=lambda message: message.from_user.id == ADMIN_USER_ID and message.text not in ["▶ Start Prediction", "⏹ Stop Prediction", "📢 Official Channel", "🔗 Register Link"])
+@bot.message_handler(func=lambda message: message.from_user.id == ADMIN_USER_ID and message.text not in ["Get Prediction", "📢 Official Channel", "🔗 Register Link"])
 def direct_admin_broadcast(message):
     try:
         if message.text:
@@ -122,7 +154,7 @@ def generate_prediction_image(period, trend, number_str, wins, streak):
         font_large = font_med = ImageFont.load_default()
 
     draw.rectangle([40, 40, 760, 140], fill=(30, 10, 25), outline=(255, 100, 150), width=3)
-    draw.text((70, 60), "WinGo 1 Min AI PREDICTION BOT", fill=(255, 255, 255), font=font_large)
+    draw.text((70, 60), "WinGo 1 Min AI PREDICTION", fill=(255, 255, 255), font=font_large)
     
     draw.rectangle([40, 160, 380, 240], fill=(20, 40, 25), outline=(0, 255, 100), width=2)
     draw.text((60, 185), f"🏆 WIN  {wins}", fill=(0, 255, 100), font=font_med)
@@ -153,97 +185,6 @@ def fetch_wingo_data():
     except Exception as e:
         print(f"API Error: {e}")
     return None
-
-def background_prediction_loop():
-    global last_checked_issue, active_prediction, is_running, total_wins, current_streak
-    
-    while True:
-        time.sleep(3)
-        if not is_running:
-            continue
-            
-        history = fetch_wingo_data()
-        if not history:
-            continue
-            
-        latest_draw = history[0]
-        current_period = str(latest_draw['issueNumber'])
-        winning_number = int(latest_draw['number'])
-        winning_size = "BIG" if winning_number >= 5 else "SMALL"
-        
-        if active_prediction and active_prediction['period'] == current_period:
-            pred_type = active_prediction['prediction']
-            pred_num = active_prediction['number']
-            
-            is_win = (pred_type == winning_size)
-            is_jackpot = (str(winning_number) in str(pred_num))
-            short_period = current_period[-4:]
-            
-            try:
-                sticker = JACKPOT_STICKER_ID if is_jackpot else (WIN_STICKER_ID if is_win else LOSS_STICKER_ID)
-                tag = "JACKPOT !" if is_jackpot else ("WIN!" if is_win else "LOSS")
-                bot.send_sticker(TARGET_CHANNEL, sticker)
-                bot.send_message(TARGET_CHANNEL, f"{"✅" if is_win or is_jackpot else "❌"} {tag}\nPeriod => #{short_period}\nResult => NUM:{winning_number} {winning_size}")
-            except Exception as err:
-                print(f"Send Result Error: {err}")
-                    
-            if is_jackpot or is_win:
-                total_wins += 1
-                current_streak += 1
-            else:
-                current_streak = 0
-                
-            active_prediction = None
-
-        if last_checked_issue != current_period:
-            last_checked_issue = current_period
-            next_period_num = str(int(current_period) + 1)
-            short_next_period = next_period_num[-4:]
-            
-            nums = [int(x['number']) for x in history[:10]]
-            big_count = sum(1 for n in nums if n >= 5)
-            trend = "GREEN" if big_count >= 5 else "RED"
-            size_trend = "SMALL" if big_count >= 5 else "BIG"
-            pred_number_str = "4 / 0" if size_trend == "SMALL" else "6 / 7"
-            
-            prediction_text = (
-                f"═══════════════════════════\n"
-                f"     🎯 POWERED BY MAAN WIN\n"
-                f"═══════════════════════════\n"
-                f"           🎰 𝗪𝗜𝗡𝗚𝗢 𝟭 𝗠𝗜𝗡𝗨𝗧𝗘🎰\n\n"
-                f"🗿 𝗣𝗘𝗥𝗜𝗢𝗗: {short_next_period}\n"
-                f"🎲 𝗣𝗥𝗘𝗗𝗜𝗖𝗧𝗜𝗢𝗡: {trend}\n"
-                f"🎯 𝗡𝗨𝗠𝗕𝗘𝗥: {pred_number_str}\n\n"
-                f"⚠  𝟳 𝗟𝗘𝗩𝗘𝗟 𝗠𝗘𝗡𝗧𝗘𝗡 𝗔𝗟𝗟 𝗧𝗜𝗠𝗘  ⚠️ \n\n"
-                f"🔗 **REGISTER LINK:** {REGISTER_LINK_URL}\n\n"
-                f"═══════════════════════════\n"
-                f" ☠️ 𝗣𝗢𝗪𝗘𝗥 𝗢𝗙 : @maanwin123_bot\n"
-                f"═══════════════════════════"
-            )
-            
-            active_prediction = {
-                'period': next_period_num,
-                'prediction': size_trend,
-                'number': pred_number_str
-            }
-            
-            img_path = generate_prediction_image(short_next_period, trend, pred_number_str, total_wins, current_streak)
-            
-            markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton("🔗 REGISTER HERE", url=REGISTER_LINK_URL))
-            
-            try:
-                with open(img_path, 'rb') as photo:
-                    bot.send_photo(TARGET_CHANNEL, photo, caption=prediction_text, reply_markup=markup, parse_mode="Markdown")
-                print(f"Prediction sent to {TARGET_CHANNEL}")
-            except Exception as err:
-                print(f"Send Photo Error: {err}")
-                try:
-                    bot.send_message(TARGET_CHANNEL, prediction_text, reply_markup=markup, parse_mode="Markdown")
-                except Exception as e:
-                    print(f"Send Msg Error: {e}")
-
-threading.Thread(target=background_prediction_loop, daemon=True).start()
 
 if __name__ == "__main__":
     bot.infinity_polling()
