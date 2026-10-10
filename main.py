@@ -7,7 +7,6 @@ import pytz
 import telebot
 from telebot import types
 from flask import Flask
-import requests
 import urllib.parse
 
 TOKEN = os.environ.get('BOT_TOKEN')
@@ -66,11 +65,7 @@ def get_deterministic_prediction(period_str):
     return period_str, size, number_display
 
 def get_prediction_image_url(period, size, number_str):
-    # QuickChart API se lightweight banner generate karna (bina Pillow library ke)
     bg_color = "00ff7f" if size == "BIG" else "ff4500"
-    title_text = f"maan.win 1 MIN - {size}"
-    
-    # Dynamically generated image card
     chart_config = {
         "type": "radialGauge",
         "data": {
@@ -103,13 +98,9 @@ def send_welcome(message):
     all_users.add(message.chat.id)
     bot.reply_to(
         message, 
-        "Welcome to Wingo 1-Min Prediction Bot! 🎰\nNiche diye gaye buttons ka use karein:", 
+        "Welcome to Wingo 1-Min Prediction Bot! 🎰\nNiche दिए गए buttons ka use karein:", 
         reply_markup=main_keyboard()
     )
-
-@bot.message_handler(func=lambda message: True)
-def track_all_users(message):
-    all_users.add(message.chat.id)
 
 @bot.message_handler(commands=['broadcast'])
 def handle_broadcast(message):
@@ -124,7 +115,7 @@ def handle_broadcast(message):
         
     success = 0
     failed = 0
-    for chat_id in all_users:
+    for chat_id in list(all_users):
         try:
             bot.send_message(chat_id, text_to_send)
             success += 1
@@ -133,7 +124,7 @@ def handle_broadcast(message):
             
     bot.reply_to(message, f"Broadcast complete!\nSuccess: {success}\nFailed: {failed}")
 
-@bot.message_handler(func=lambda message: message.text == "🎯 Get Prediction")
+@bot.message_handler(func=lambda message: "Get Prediction" in message.text if message.text else False)
 def handle_prediction(message):
     all_users.add(message.chat.id)
     period, size, number_display = get_deterministic_prediction(get_current_period())
@@ -166,7 +157,7 @@ def handle_prediction(message):
         print("Image send error:", e)
         bot.send_message(message.chat.id, formatted_text, reply_markup=main_keyboard())
 
-@bot.message_handler(func=lambda message: message.text == "📝 Registration Process")
+@bot.message_handler(func=lambda message: "Registration Process" in message.text if message.text else False)
 def handle_register(message):
     all_users.add(message.chat.id)
     reg_text = (
@@ -176,7 +167,7 @@ def handle_register(message):
     )
     bot.send_message(message.chat.id, reg_text, parse_mode="Markdown", reply_markup=main_keyboard())
 
-@bot.message_handler(func=lambda message: message.text == "📢 Official Channel")
+@bot.message_handler(func=lambda message: "Official Channel" in message.text if message.text else False)
 def handle_channel(message):
     all_users.add(message.chat.id)
     channel_text = (
@@ -185,6 +176,11 @@ def handle_channel(message):
         "🔗 **CHANNEL LINK:** https://t.me/rajagamesnumbersurshot"
     )
     bot.send_message(message.chat.id, channel_text, parse_mode="Markdown", reply_markup=main_keyboard())
+
+# Sabse aakhri mein general message tracker (is se handlers block nahi honge)
+@bot.message_handler(func=lambda message: True)
+def track_all_users(message):
+    all_users.add(message.chat.id)
 
 if __name__ == '__main__':
     threading.Thread(target=run_flask).start()
