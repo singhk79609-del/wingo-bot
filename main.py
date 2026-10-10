@@ -170,16 +170,21 @@ def generate_prediction_image(period, trend, number_str, wins, streak):
     return file_path
 
 def fetch_wingo_data():
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://draw.ar-lottery01.com/"
+    }
     try:
         url = f"https://draw.ar-lottery01.com/WinGo/WinGo_1M/GetHistoryIssuePage.json?t={int(time.time()*1000)}"
-        res = requests.get(url, headers=headers, timeout=8)
+        res = requests.get(url, headers=headers, timeout=15)
+        print(f"API Status Code: {res.status_code}")
         if res.status_code == 200:
             data = res.json()
             if 'data' in data and 'list' in data['data']:
                 return data['data']['list']
     except Exception as e:
-        print(f"API Error: {e}")
+        print(f"API Error Details: {e}")
     return None
 
 if __name__ == "__main__":
